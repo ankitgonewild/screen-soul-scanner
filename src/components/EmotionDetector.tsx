@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import * as faceapi from '@tensorflow-models/face-detection';
@@ -111,8 +110,7 @@ const EmotionDetector: React.FC = () => {
     }
   };
 
-  const preprocessFace = async (faceImage: HTMLCanvasElement): Promise<tf.Tensor> => {
-    // Convert to grayscale and resize to 48x48 (model input size)
+  const preprocessFace = async (faceImage: HTMLCanvasElement | HTMLVideoElement): Promise<tf.Tensor3D> => {
     return tf.tidy(() => {
       // Convert image to tensor
       let tensor = tf.browser.fromPixels(faceImage);
@@ -127,11 +125,11 @@ const EmotionDetector: React.FC = () => {
       const normalized = resized.div(255.0);
       
       // Reshape to match model input: [1, 48, 48, 1]
-      return normalized.expandDims(0);
+      return normalized.expandDims(0) as tf.Tensor3D;
     });
   };
 
-  const extractFaceFromDetection = (video: HTMLVideoElement, face: faceapi.Face): HTMLCanvasElement => {
+  const extractFaceFromDetection = (source: HTMLVideoElement | HTMLImageElement, face: faceapi.Face): HTMLCanvasElement => {
     if (!canvasRef.current) {
       canvasRef.current = document.createElement('canvas');
     }
@@ -149,7 +147,7 @@ const EmotionDetector: React.FC = () => {
     
     // Draw the face region to the canvas
     ctx.drawImage(
-      video,
+      source,
       bbox.xMin - margin, bbox.yMin - margin,
       bbox.width + margin * 2, bbox.height + margin * 2,
       0, 0, canvas.width, canvas.height
@@ -181,7 +179,7 @@ const EmotionDetector: React.FC = () => {
             score: scores[i]
           }));
           
-          // Clean up tensors to prevent memory leaks
+          // Clean up tensors
           tensorInput.dispose();
           predictions.dispose();
         } else {
@@ -216,38 +214,23 @@ const EmotionDetector: React.FC = () => {
       const faces = await faceDetectionModel.estimateFaces(imageElement);
 
       if (faces.length > 0) {
-        // Create a temporary canvas to work with
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = imageElement.width;
-        tempCanvas.height = imageElement.height;
-        const tempCtx = tempCanvas.getContext('2d');
-        if (!tempCtx) return;
-        
-        // Draw the image to the canvas
-        tempCtx.drawImage(imageElement, 0, 0);
-        
-        // Extract face
         const faceCanvas = extractFaceFromDetection(imageElement, faces[0]);
         
         let emotionScores: EmotionScore[];
         
         if (emotionModel) {
-          // Use the actual model to predict emotions
           const tensorInput = await preprocessFace(faceCanvas);
           const predictions = emotionModel.predict(tensorInput) as tf.Tensor;
           const scores = await predictions.data();
           
-          // Convert scores to emotion objects
           emotionScores = emotionLabels.map((emotion, i) => ({
             emotion,
             score: scores[i]
           }));
           
-          // Clean up tensors
           tensorInput.dispose();
           predictions.dispose();
         } else {
-          // Fallback to mock emotions
           emotionScores = emotionLabels.map(emotion => ({
             emotion,
             score: Math.random() * (emotion === 'neutral' ? 0.9 : 0.7)
