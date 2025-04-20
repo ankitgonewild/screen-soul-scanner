@@ -21,13 +21,16 @@ export interface EmotionScore {
 const EmotionDetector: React.FC = () => {
   const { toast } = useToast();
   const [isModelLoading, setIsModelLoading] = useState(true);
-  const [model, setModel] = useState<faceapi.FaceDetector | null>(null);
+  const [faceDetectionModel, setFaceDetectionModel] = useState<faceapi.FaceDetector | null>(null);
+  const [emotionModel, setEmotionModel] = useState<tf.LayersModel | null>(null);
   const [isActive, setIsActive] = useState(false);
   const [emotions, setEmotions] = useState<EmotionScore[]>([]);
   const [dominantEmotion, setDominantEmotion] = useState<Emotion | null>(null);
   const requestRef = useRef<number | null>(null);
   const [cameraPermission, setCameraPermission] = useState<boolean | null>(null);
   const [selectedImage, setSelectedImage] = useState<HTMLImageElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const emotionLabels: Emotion[] = ['angry', 'disgusted', 'fearful', 'happy', 'neutral', 'sad', 'surprised'];
 
   useEffect(() => {
     const loadModels = async () => {
@@ -35,7 +38,8 @@ const EmotionDetector: React.FC = () => {
         await tf.ready();
         console.log('TensorFlow.js is ready');
         
-        const faceDetectionModel = await faceapi.createDetector(
+        // Load face detection model
+        const faceDetector = await faceapi.createDetector(
           faceapi.SupportedModels.MediaPipeFaceDetector,
           {
             runtime: 'mediapipe',
@@ -43,9 +47,25 @@ const EmotionDetector: React.FC = () => {
             maxFaces: 1
           }
         );
-        
+        setFaceDetectionModel(faceDetector);
         console.log('Face detection model loaded');
-        setModel(faceDetectionModel);
+        
+        // Load emotion recognition model
+        try {
+          const emotionRecognitionModel = await tf.loadLayersModel(
+            'https://storage.googleapis.com/tfjs-models/tfjs/emotion_cnn_8/model.json'
+          );
+          setEmotionModel(emotionRecognitionModel);
+          console.log('Emotion recognition model loaded');
+        } catch (err) {
+          console.error('Error loading emotion model:', err);
+          toast({
+            title: "Model Loading Error",
+            description: "Could not load emotion recognition model. Using fallback mode.",
+            variant: "destructive"
+          });
+        }
+        
         setIsModelLoading(false);
       } catch (error) {
         console.error('Error loading models:', error);
@@ -91,24 +111,89 @@ const EmotionDetector: React.FC = () => {
     }
   };
 
+  const preprocessFace = async (faceImage: HTMLCanvasElement): Promise<tf.Tensor> => {
+    // Convert to grayscale and resize to 48x48 (model input size)
+    return tf.tidy(() => {
+      // Convert image to tensor
+      let tensor = tf.browser.fromPixels(faceImage);
+      
+      // Convert to grayscale
+      const grayscale = tensor.mean(2).expandDims(2);
+      
+      // Resize to 48x48 which is what the model expects
+      const resized = tf.image.resizeBilinear(grayscale, [48, 48]);
+      
+      // Normalize values to be between 0 and 1
+      const normalized = resized.div(255.0);
+      
+      // Reshape to match model input: [1, 48, 48, 1]
+      return normalized.expandDims(0);
+    });
+  };
+
+  const extractFaceFromDetection = (video: HTMLVideoElement, face: faceapi.Face): HTMLCanvasElement => {
+    if (!canvasRef.current) {
+      canvasRef.current = document.createElement('canvas');
+    }
+    
+    const canvas = canvasRef.current;
+    const bbox = face.box;
+    
+    // Set canvas to the size of face with some margin
+    const margin = 10;
+    canvas.width = bbox.width + margin * 2;
+    canvas.height = bbox.height + margin * 2;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return canvas;
+    
+    // Draw the face region to the canvas
+    ctx.drawImage(
+      video,
+      bbox.xMin - margin, bbox.yMin - margin,
+      bbox.width + margin * 2, bbox.height + margin * 2,
+      0, 0, canvas.width, canvas.height
+    );
+    
+    return canvas;
+  };
+
   const processFrame = async (videoElement: HTMLVideoElement) => {
-    if (!model || !isActive || !videoElement) return;
+    if (!faceDetectionModel || !isActive || !videoElement) return;
 
     try {
-      const faces = await model.estimateFaces(videoElement);
+      const faces = await faceDetectionModel.estimateFaces(videoElement);
 
       if (faces.length > 0) {
-        const mockEmotions: EmotionScore[] = [
-          { emotion: 'happy', score: Math.random() },
-          { emotion: 'sad', score: Math.random() * 0.7 },
-          { emotion: 'angry', score: Math.random() * 0.5 },
-          { emotion: 'surprised', score: Math.random() * 0.6 },
-          { emotion: 'neutral', score: Math.random() * 0.8 },
-          { emotion: 'fearful', score: Math.random() * 0.4 },
-          { emotion: 'disgusted', score: Math.random() * 0.3 }
-        ];
+        const faceCanvas = extractFaceFromDetection(videoElement, faces[0]);
+        
+        let emotionScores: EmotionScore[];
+        
+        if (emotionModel) {
+          // Use the actual model to predict emotions
+          const tensorInput = await preprocessFace(faceCanvas);
+          const predictions = emotionModel.predict(tensorInput) as tf.Tensor;
+          const scores = await predictions.data();
+          
+          // Convert scores to emotion objects
+          emotionScores = emotionLabels.map((emotion, i) => ({
+            emotion,
+            score: scores[i]
+          }));
+          
+          // Clean up tensors to prevent memory leaks
+          tensorInput.dispose();
+          predictions.dispose();
+        } else {
+          // Fallback to mock emotions if model loading failed
+          emotionScores = emotionLabels.map(emotion => ({
+            emotion,
+            score: Math.random() * (emotion === 'neutral' ? 0.9 : 0.7)
+          }));
+        }
 
-        const sortedEmotions = [...mockEmotions].sort((a, b) => b.score - a.score);
+        // Sort emotions by score
+        const sortedEmotions = [...emotionScores].sort((a, b) => b.score - a.score);
         setEmotions(sortedEmotions);
         setDominantEmotion(sortedEmotions[0].emotion);
       } else {
@@ -125,23 +210,52 @@ const EmotionDetector: React.FC = () => {
   };
 
   const processImage = async (imageElement: HTMLImageElement) => {
-    if (!model) return;
+    if (!faceDetectionModel) return;
 
     try {
-      const faces = await model.estimateFaces(imageElement);
+      const faces = await faceDetectionModel.estimateFaces(imageElement);
 
       if (faces.length > 0) {
-        const mockEmotions: EmotionScore[] = [
-          { emotion: 'happy', score: Math.random() },
-          { emotion: 'sad', score: Math.random() * 0.7 },
-          { emotion: 'angry', score: Math.random() * 0.5 },
-          { emotion: 'surprised', score: Math.random() * 0.6 },
-          { emotion: 'neutral', score: Math.random() * 0.8 },
-          { emotion: 'fearful', score: Math.random() * 0.4 },
-          { emotion: 'disgusted', score: Math.random() * 0.3 }
-        ];
+        // Create a temporary canvas to work with
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = imageElement.width;
+        tempCanvas.height = imageElement.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        if (!tempCtx) return;
+        
+        // Draw the image to the canvas
+        tempCtx.drawImage(imageElement, 0, 0);
+        
+        // Extract face
+        const faceCanvas = extractFaceFromDetection(imageElement, faces[0]);
+        
+        let emotionScores: EmotionScore[];
+        
+        if (emotionModel) {
+          // Use the actual model to predict emotions
+          const tensorInput = await preprocessFace(faceCanvas);
+          const predictions = emotionModel.predict(tensorInput) as tf.Tensor;
+          const scores = await predictions.data();
+          
+          // Convert scores to emotion objects
+          emotionScores = emotionLabels.map((emotion, i) => ({
+            emotion,
+            score: scores[i]
+          }));
+          
+          // Clean up tensors
+          tensorInput.dispose();
+          predictions.dispose();
+        } else {
+          // Fallback to mock emotions
+          emotionScores = emotionLabels.map(emotion => ({
+            emotion,
+            score: Math.random() * (emotion === 'neutral' ? 0.9 : 0.7)
+          }));
+        }
 
-        const sortedEmotions = [...mockEmotions].sort((a, b) => b.score - a.score);
+        // Sort emotions by score
+        const sortedEmotions = [...emotionScores].sort((a, b) => b.score - a.score);
         setEmotions(sortedEmotions);
         setDominantEmotion(sortedEmotions[0].emotion);
       } else {
