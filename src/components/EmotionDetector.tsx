@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import * as faceapi from '@tensorflow-models/face-detection';
@@ -227,7 +228,7 @@ const EmotionDetector: React.FC = () => {
                   </div>
                 )}
               </TabsContent>
-            </div>
+            </Tabs>
           )}
           
           {(isActive || selectedImage) && emotions.length > 0 && (
