@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import * as faceapi from '@tensorflow-models/face-detection';
@@ -111,7 +110,7 @@ const EmotionDetector: React.FC = () => {
     }
   };
 
-  const preprocessFace = async (faceImage: HTMLCanvasElement | HTMLVideoElement): Promise<tf.Tensor3D> => {
+  const preprocessFace = async (faceImage: HTMLCanvasElement | HTMLVideoElement): Promise<tf.Tensor4D> => {
     return tf.tidy(() => {
       // Convert image to tensor
       let tensor = tf.browser.fromPixels(faceImage);
@@ -126,8 +125,8 @@ const EmotionDetector: React.FC = () => {
       const normalized = resized.div(255.0);
       
       // Reshape to match model input: [1, 48, 48, 1]
-      // Explicitly cast to Tensor3D to fix the TypeScript error
-      return normalized.expandDims(0) as tf.Tensor3D;
+      // Using expandDims to add batch dimension and explicitly casting to Tensor4D
+      return normalized.expandDims(0) as tf.Tensor4D;
     });
   };
 
@@ -172,6 +171,7 @@ const EmotionDetector: React.FC = () => {
         if (emotionModel) {
           // Use the actual model to predict emotions
           const tensorInput = await preprocessFace(faceCanvas);
+          // Ensure we use the correct typing for the prediction
           const predictions = emotionModel.predict(tensorInput) as tf.Tensor;
           const scores = await predictions.data();
           
@@ -222,6 +222,7 @@ const EmotionDetector: React.FC = () => {
         
         if (emotionModel) {
           const tensorInput = await preprocessFace(faceCanvas);
+          // Ensure we use the correct typing for the prediction
           const predictions = emotionModel.predict(tensorInput) as tf.Tensor;
           const scores = await predictions.data();
           
