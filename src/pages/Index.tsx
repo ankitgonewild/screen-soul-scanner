@@ -2,6 +2,7 @@
 import React from 'react';
 import { Sparkle, Star, Info } from 'lucide-react';
 import EmotionDetector from '@/components/EmotionDetector';
+import { AspectRatio } from '@/components/ui/aspect-ratio';
 
 const Index = () => {
   return (
@@ -44,35 +45,83 @@ const Index = () => {
       <main className="w-full max-w-6xl mx-auto">
         <EmotionDetector />
 
-        <section className="mt-12 bg-white/5 backdrop-blur-sm p-8 rounded-lg max-w-3xl mx-auto border border-purple-500/20">
-          <h2 className="text-2xl font-semibold mb-6 text-purple-400">How It Works</h2>
-          <ol className="list-decimal list-inside space-y-4 text-muted-foreground">
-            <li className="flex items-start gap-3">
-              <span className="mt-1">
-                <Star className="w-4 h-4 text-purple-400" />
-              </span>
-              <span>Choose your preferred input method - webcam for real-time analysis or upload an image</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1">
-                <Star className="w-4 h-4 text-purple-400" />
-              </span>
-              <span>Our AI model processes the input and detects facial features with high precision</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1">
-                <Star className="w-4 h-4 text-purple-400" />
-              </span>
-              <span>Advanced algorithms analyze the detected features to determine emotional states</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <span className="mt-1">
-                <Star className="w-4 h-4 text-purple-400" />
-              </span>
-              <span>View detailed results showing primary and secondary emotions with confidence scores</span>
-            </li>
-          </ol>
-          <p className="mt-6 text-sm text-muted-foreground bg-purple-950/20 p-4 rounded-lg border border-purple-500/20">
+        <section className="mt-12 bg-white/5 backdrop-blur-sm p-8 rounded-lg max-w-4xl mx-auto border border-purple-500/20">
+          <h2 className="text-2xl font-semibold mb-8 text-purple-400 text-center">How It Works</h2>
+          <div className="grid gap-8">
+            <div className="flex flex-col md:flex-row gap-6 items-center">
+              <div className="w-full md:w-1/2">
+                <AspectRatio ratio={16/9} className="bg-muted rounded-lg overflow-hidden">
+                  <img 
+                    src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d" 
+                    alt="Person using webcam"
+                    className="object-cover w-full h-full opacity-90 hover:scale-105 transition-transform duration-300"
+                  />
+                </AspectRatio>
+              </div>
+              <div className="w-full md:w-1/2 flex items-start gap-3">
+                <span className="mt-1">
+                  <Star className="w-4 h-4 text-purple-400" />
+                </span>
+                <p className="text-muted-foreground">Choose your preferred input method - webcam for real-time analysis or upload an image</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row-reverse gap-6 items-center">
+              <div className="w-full md:w-1/2">
+                <AspectRatio ratio={16/9} className="bg-muted rounded-lg overflow-hidden">
+                  <img 
+                    src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b" 
+                    alt="AI Processing"
+                    className="object-cover w-full h-full opacity-90 hover:scale-105 transition-transform duration-300"
+                  />
+                </AspectRatio>
+              </div>
+              <div className="w-full md:w-1/2 flex items-start gap-3">
+                <span className="mt-1">
+                  <Star className="w-4 h-4 text-purple-400" />
+                </span>
+                <p className="text-muted-foreground">Our AI model processes the input and detects facial features with high precision</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row gap-6 items-center">
+              <div className="w-full md:w-1/2">
+                <AspectRatio ratio={16/9} className="bg-muted rounded-lg overflow-hidden">
+                  <img 
+                    src="https://images.unsplash.com/photo-1498050108023-c5249f4df085" 
+                    alt="Advanced Analysis"
+                    className="object-cover w-full h-full opacity-90 hover:scale-105 transition-transform duration-300"
+                  />
+                </AspectRatio>
+              </div>
+              <div className="w-full md:w-1/2 flex items-start gap-3">
+                <span className="mt-1">
+                  <Star className="w-4 h-4 text-purple-400" />
+                </span>
+                <p className="text-muted-foreground">Advanced algorithms analyze the detected features to determine emotional states</p>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row-reverse gap-6 items-center">
+              <div className="w-full md:w-1/2">
+                <AspectRatio ratio={16/9} className="bg-muted rounded-lg overflow-hidden">
+                  <img 
+                    src="https://images.unsplash.com/photo-1461749280684-dccba630e2f6" 
+                    alt="Results Display"
+                    className="object-cover w-full h-full opacity-90 hover:scale-105 transition-transform duration-300"
+                  />
+                </AspectRatio>
+              </div>
+              <div className="w-full md:w-1/2 flex items-start gap-3">
+                <span className="mt-1">
+                  <Star className="w-4 h-4 text-purple-400" />
+                </span>
+                <p className="text-muted-foreground">View detailed results showing primary and secondary emotions with confidence scores</p>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-8 text-sm text-muted-foreground bg-purple-950/20 p-4 rounded-lg border border-purple-500/20">
             Note: Screen Soul Scanner uses state-of-the-art machine learning models to ensure accurate emotion detection 
             while maintaining complete privacy by processing all data locally in your browser.
           </p>
@@ -87,3 +136,4 @@ const Index = () => {
 };
 
 export default Index;
+
