@@ -125,7 +125,8 @@ const EmotionDetector: React.FC = () => {
       const normalized = resized.div(255.0);
       
       // Reshape to match model input: [1, 48, 48, 1]
-      return normalized.expandDims(0) as tf.Tensor3D;
+      // Cast to Tensor3D for TypeScript to recognize the shape
+      return normalized.expandDims(0) as unknown as tf.Tensor3D;
     });
   };
 
