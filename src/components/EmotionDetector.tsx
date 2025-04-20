@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import * as faceapi from '@tensorflow-models/face-detection';
@@ -125,8 +126,8 @@ const EmotionDetector: React.FC = () => {
       const normalized = resized.div(255.0);
       
       // Reshape to match model input: [1, 48, 48, 1]
-      // Cast to Tensor3D for TypeScript to recognize the shape
-      return normalized.expandDims(0) as unknown as tf.Tensor3D;
+      // Explicitly cast to Tensor3D to fix the TypeScript error
+      return normalized.expandDims(0) as tf.Tensor3D;
     });
   };
 
