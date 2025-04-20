@@ -125,8 +125,7 @@ const EmotionDetector: React.FC = () => {
       const normalized = resized.div(255.0);
       
       // Reshape to match model input: [1, 48, 48, 1]
-      // Using expandDims to add batch dimension and explicitly casting to Tensor4D
-      return normalized.expandDims(0) as tf.Tensor4D;
+      return tf.expandDims(normalized, 0) as tf.Tensor4D;
     });
   };
 
